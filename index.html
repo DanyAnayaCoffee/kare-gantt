@@ -16,7 +16,7 @@
             border-radius: 0.75rem;
             background: white;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            max-height: 70vh;
+            max-height: 75vh;
         }
 
         .gantt-row {
@@ -56,6 +56,22 @@
             align-items: center;
             justify-content: center;
             font-size: 0.7rem;
+        }
+
+        .month-cell {
+            height: 30px;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #475569;
+            background: #f1f5f9;
+            flex-shrink: 0;
         }
 
         .gantt-bar-wrapper {
@@ -109,10 +125,17 @@
             background: #f8fafc;
             font-weight: 700;
             color: #64748b;
-            height: 50px;
+            height: 40px;
         }
 
         .weekend { background-color: #fdf2f2; }
+        
+        #gantt-header-wrapper {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: white;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -140,9 +163,17 @@
         </div>
 
         <div class="gantt-scroll-container">
-            <div id="gantt-header" class="flex border-b border-slate-200 sticky top-0 z-50">
-                <div class="sticky-col header-day uppercase text-[10px] tracking-widest">Task Information</div>
-                <div id="header-days-container" class="flex"></div>
+            <div id="gantt-header-wrapper">
+                <!-- Month Row -->
+                <div id="gantt-month-header" class="flex border-b border-slate-200">
+                    <div class="sticky-col h-[30px] bg-slate-100 border-b border-slate-200"></div>
+                    <div id="header-months-container" class="flex"></div>
+                </div>
+                <!-- Day Row -->
+                <div id="gantt-day-header" class="flex border-b border-slate-200">
+                    <div class="sticky-col header-day uppercase text-[10px] tracking-widest">Task Information</div>
+                    <div id="header-days-container" class="flex"></div>
+                </div>
             </div>
             <div id="gantt-body" class="relative">
                 <!-- Dynamically filled -->
@@ -169,7 +200,6 @@
         const dayWidth = 45;
         const stickyWidth = 320;
         
-        // Initial fallback data
         const backupTasks = [
             { id: "4400", titulo: "Regression Testing Setup", responsable: "QA Team", inicio: "2026-02-01", fin: "2026-02-15" }
         ];
@@ -191,11 +221,8 @@
             const lines = text.split(/\r?\n/).filter(l => l.trim());
             if (lines.length < 2) return;
 
-            // Auto-detect delimiter
             const firstLine = lines[0];
             const delimiter = firstLine.includes(';') ? ';' : ',';
-            
-            // Normalize headers
             const headers = splitCSVLine(firstLine, delimiter).map(h => 
                 h.trim().toLowerCase().replace(/^"|"$/g, '').replace(/^\uFEFF/, "")
             );
@@ -207,12 +234,9 @@
                     row[h] = values[i] ? values[i].replace(/^"|"$/g, '').trim() : '';
                 });
 
-                // Mapping based on your specific Azure CSV structure
                 const id = row['id'] || '0';
                 const title = row['title'] || 'Untitled';
                 const owner = row['assigned to'] || '';
-                
-                // Date column priority
                 const rawStart = row['start dates'] || row['start date'];
                 const rawEnd = row['due date'] || row['end date'];
 
@@ -226,7 +250,7 @@
             }).filter(t => t.inicio && t.fin);
 
             if (tasks.length === 0) {
-                alert("No valid tasks found with Start and Due dates. Please check your CSV columns.");
+                alert("No valid tasks found. Please check 'Start Dates' and 'Due Date' columns.");
                 return;
             }
 
@@ -253,13 +277,10 @@
 
         function parseAzureDate(v) {
             if (!v || v === "") return null;
-            // Azure often exports: "2/16/2026 12:00:00 AM" or "2/16/2026"
             const clean = v.split(' ')[0];
             const parts = clean.split(/[\/-]/);
-            
             if (parts.length === 3) {
                 let m, d, y;
-                // M/D/YYYY format
                 m = parts[0].padStart(2, '0');
                 d = parts[1].padStart(2, '0');
                 y = parts[2];
@@ -271,30 +292,47 @@
 
         function renderGantt(tasks) {
             const body = document.getElementById('gantt-body');
+            const headerMonths = document.getElementById('header-months-container');
             const headerDays = document.getElementById('header-days-container');
             const info = document.getElementById('date-range-info');
             
             body.innerHTML = '';
+            headerMonths.innerHTML = '';
             headerDays.innerHTML = '';
 
-            // Calculate total range
             const allDates = tasks.flatMap(t => [new Date(t.inicio), new Date(t.fin)]);
             let minDate = new Date(Math.min(...allDates));
             let maxDate = new Date(Math.max(...allDates));
 
-            // Viewport padding
             minDate.setDate(minDate.getDate() - 2);
             maxDate.setDate(maxDate.getDate() + 5);
 
             const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-            info.innerText = `Showing from ${minDate.toLocaleDateString()} to ${maxDate.toLocaleDateString()} (${tasks.length} tasks)`;
+            info.innerText = `Range: ${minDate.toLocaleDateString()} to ${maxDate.toLocaleDateString()} (${tasks.length} tasks)`;
 
-            // Render Day Headers
+            let currentMonth = -1;
+            let monthSpan = 0;
+            let monthEl = null;
+
             for (let i = 0; i < totalDays; i++) {
                 const cur = new Date(minDate);
                 cur.setDate(minDate.getDate() + i);
-                const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
                 
+                // Month Logic
+                if (cur.getMonth() !== currentMonth) {
+                    currentMonth = cur.getMonth();
+                    monthEl = document.createElement('div');
+                    monthEl.className = 'month-cell';
+                    monthEl.innerText = cur.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                    headerMonths.appendChild(monthEl);
+                    monthSpan = 0;
+                }
+                monthSpan++;
+                monthEl.style.width = `${monthSpan * dayWidth}px`;
+                monthEl.style.minWidth = `${monthSpan * dayWidth}px`;
+
+                // Day Logic
+                const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
                 const dayEl = document.createElement('div');
                 dayEl.className = `day-cell header-day ${isWeekend ? 'weekend' : ''}`;
                 dayEl.innerHTML = `
@@ -304,12 +342,10 @@
                 headerDays.appendChild(dayEl);
             }
 
-            // Render Rows
             tasks.sort((a,b) => new Date(a.inicio) - new Date(b.inicio)).forEach(task => {
                 const row = document.createElement('div');
                 row.className = 'gantt-row';
                 
-                // Sticky Label
                 const label = document.createElement('div');
                 label.className = 'sticky-col';
                 label.innerHTML = `
@@ -323,7 +359,6 @@
                 `;
                 row.appendChild(label);
 
-                // Grid Background
                 const grid = document.createElement('div');
                 grid.className = 'time-grid-container';
                 for(let i=0; i<totalDays; i++) {
@@ -335,7 +370,6 @@
                     grid.appendChild(cell);
                 }
 
-                // Bar
                 const dStart = new Date(task.inicio);
                 const dEnd = new Date(task.fin);
                 const offset = Math.floor((dStart - minDate) / (1000 * 60 * 60 * 24));
@@ -356,7 +390,6 @@
                 body.appendChild(row);
             });
 
-            // Today Line
             const today = new Date();
             today.setHours(0,0,0,0);
             if (today >= minDate && today <= maxDate) {
