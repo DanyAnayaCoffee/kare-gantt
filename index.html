@@ -7,403 +7,369 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #fcfcfc; color: #333; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; }
         .kare-orange { color: #F16B24; }
         .bg-kare-orange { background-color: #F16B24; }
         
-        /* Gantt Specific Styles */
+        .gantt-scroll-container {
+            overflow-x: auto;
+            border-radius: 0.75rem;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-height: 70vh;
+        }
+
         .gantt-row {
-            display: grid;
-            align-items: center;
-            height: 45px;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        .gantt-bar {
-            height: 24px;
-            border-radius: 12px;
+            display: flex;
+            height: 52px;
+            border-bottom: 1px solid #f1f5f9;
             position: relative;
-            z-index: 10;
-            transition: all 0.3s ease;
         }
-        .gantt-bar:hover {
-            filter: brightness(1.1);
-            transform: scaleY(1.1);
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            width: 320px;
+            min-width: 320px;
+            background: white;
+            z-index: 40;
+            border-right: 2px solid #F16B24;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            box-shadow: 2px 0 5px -2px rgba(0,0,0,0.05);
         }
-        .day-column {
-            border-right: 1px solid #f0f0f0;
-            text-align: center;
-            font-size: 0.65rem;
-            color: #9ca3af;
-            padding-top: 8px;
+
+        .time-grid-container {
+            position: relative;
+            display: flex;
+            flex-grow: 1;
         }
+
+        .day-cell {
+            min-width: 45px;
+            width: 45px;
+            border-right: 1px solid #f1f5f9;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .gantt-bar-wrapper {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 28px;
+            z-index: 20;
+            transition: all 0.2s ease;
+        }
+
+        .gantt-bar {
+            height: 100%;
+            border-radius: 6px;
+            background: #F16B24;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(241, 107, 36, 0.2);
+            white-space: nowrap;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
         .today-line {
             position: absolute;
             top: 0;
             bottom: 0;
             width: 2px;
             background-color: #ef4444;
-            z-index: 20;
+            z-index: 35;
             pointer-events: none;
         }
-        .sticky-col {
-            position: sticky;
-            left: 0;
-            background: white;
-            z-index: 30;
-            border-right: 2px solid #F16B24;
+
+        .today-label {
+            position: absolute;
+            top: -22px;
+            left: -18px;
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 800;
         }
+
+        .header-day {
+            background: #f8fafc;
+            font-weight: 700;
+            color: #64748b;
+            height: 50px;
+        }
+
+        .weekend { background-color: #fdf2f2; }
     </style>
 </head>
-<body class="p-6 md:p-12">
+<body class="p-4 md:p-8">
 
-    <header class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b-4 border-[#F16B24] pb-6">
+    <header class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b-4 border-[#F16B24] pb-6">
         <div class="flex items-center gap-6">
-            <img src="https://www.doyoukare.com/wp-content/uploads/2021/05/cropped-Kare_Header_Logo.png" alt="KARE Logo" width="171" height="56" class="object-contain">
-            <div class="h-12 w-1 bg-gray-200 hidden md:block"></div>
+            <img src="https://www.doyoukare.com/wp-content/uploads/2021/05/cropped-Kare_Header_Logo.png" alt="KARE Logo" width="140" class="object-contain">
+            <div class="h-10 w-px bg-slate-200 hidden md:block"></div>
             <div>
-                <h1 class="text-2xl font-black uppercase tracking-tight text-gray-800">QA Roadmap: .NET 8 Upgrade</h1>
-                <p class="text-gray-500 font-medium italic">Regression Testing Timeline</p>
+                <h1 class="text-xl font-black uppercase tracking-tight text-slate-800">Azure DevOps QA Roadmap</h1>
+                <p class="text-slate-400 text-sm font-medium">.NET 8 Upgrade Timeline</p>
             </div>
+        </div>
+        <div class="mt-4 md:mt-0 flex gap-3">
+            <button onclick="triggerCSV()" class="bg-[#F16B24] hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg shadow-md text-xs font-bold transition-all flex items-center gap-2">
+                <span>📂</span> LOAD AZURE CSV
+            </button>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto">
-        
-        <div class="flex items-center gap-4 mb-6">
-            <span class="bg-[#F16B24] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Gantt View</span>
-            <div class="h-px bg-orange-100 flex-grow"></div>
-            <button id="load-csv-btn" onclick="loadTasksFromCSV()" class="bg-[#F16B24] text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wider hover:bg-orange-600">📂 Upload CSV</button>
-            <div id="date-range-label" class="text-xs font-bold text-gray-400 uppercase tracking-widest"></div>
+    <main class="max-w-[1600px] mx-auto">
+        <div class="flex items-center gap-4 mb-4">
+            <div id="date-range-info" class="text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-widest">Awaiting file upload...</div>
+            <div class="h-px bg-slate-100 flex-grow"></div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto" id="gantt-scroll-container">
-                <div id="gantt-master-container" class="min-w-max">
-                    <div id="gantt-header" class="flex border-b border-gray-200 bg-gray-50">
-                        <div class="sticky-col w-64 p-4 text-xs font-black uppercase tracking-widest text-gray-400 bg-gray-50">Task Details</div>
-                    </div>
-                    <div id="gantt-body" class="relative">
-                        <!-- Rows and bars injected via JS -->
-                    </div>
-                </div>
+        <div class="gantt-scroll-container">
+            <div id="gantt-header" class="flex border-b border-slate-200 sticky top-0 z-50">
+                <div class="sticky-col header-day uppercase text-[10px] tracking-widest">Task Information</div>
+                <div id="header-days-container" class="flex"></div>
+            </div>
+            <div id="gantt-body" class="relative">
+                <!-- Dynamically filled -->
             </div>
         </div>
 
-        <div class="mt-8 flex gap-6 justify-center">
+        <div class="mt-6 flex flex-wrap gap-6 justify-center">
             <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-kare-orange"></div>
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-tighter">Active Testing</span>
+                <div class="w-3 h-3 rounded-sm bg-kare-orange"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">QA Testing Period</span>
             </div>
             <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-gray-300"></div>
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-tighter">Planned</span>
+                <div class="w-0.5 h-4 bg-red-500"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Day</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-sm bg-slate-100 border border-slate-200"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Weekend</span>
             </div>
         </div>
     </main>
 
-    <footer class="max-w-7xl mx-auto mt-20 pb-10 text-center border-t border-gray-100 pt-8">
-        <p class="text-gray-400 text-xs uppercase font-bold tracking-widest">Interactive QA Timeline Dashboard</p>
-    </footer>
-
     <script>
-        /**
-         * FALLBACK DATA
-         * Supported CSV headers (any of these will work; case-insensitive):
-         * - id / ID
-         * - titulo / título / title / Title
-         * - responsable / assigned to / Assigned To
-         * - estado / state / State
-         * - prioridad / priority / Priority
-         * - inicio / start / start date / start dates / Start Date / Start Dates
-         * - fin / end / end date / due date / End Date / Due Date
-         *
-         * Date formats supported:
-         * - YYYY-MM-DD
-         * - D/M/YYYY (optionally with time like "19/1/2026 12:00:00 a.m.")
-         */
+        const dayWidth = 45;
+        const stickyWidth = 320;
+        
+        // Initial fallback data
         const backupTasks = [
-            { id: "31686", titulo: ".NET additional fixes", inicio: "2026-02-26", fin: "2026-03-13" },
-            { id: "26722", titulo: "HERO Onboarding Process", inicio: "2026-01-19", fin: "2026-01-21" },
-            { id: "26740", titulo: "Kare Club", inicio: "2026-01-19", fin: "2026-01-23" }
+            { id: "4400", titulo: "Regression Testing Setup", responsable: "QA Team", inicio: "2026-02-01", fin: "2026-02-15" }
         ];
 
-        function loadTasksFromCSV() {
+        function triggerCSV() {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.csv';
-            input.style.display = 'none';
-
-            input.onchange = (e) => {
+            input.onchange = e => {
                 const file = e.target.files[0];
-                if (!file) {
-                    console.log('No file selected. Rendering fallback data.');
-                    renderGantt(backupTasks);
-                    return;
-                }
-
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        console.log('📄 File size:', file.size, 'bytes');
-                        const csvText = event.target.result;
-                        const data = parseCSV(csvText);
-
-                        if (!data || data.length === 0) {
-                            throw new Error('CSV is empty or could not be parsed.');
-                        }
-
-                        const formattedTasks = data.map((row, idx) => {
-                            const id = getFirst(row, ['id', 'ID']) || String(idx + 1);
-                            const titulo = getFirst(row, ['titulo', 'título', 'title', 'Title']) || '';
-                            const responsable = getFirst(row, ['responsable', 'assigned to', 'Assigned To']) || '';
-                            const estado = getFirst(row, ['estado', 'state', 'State']) || '';
-                            const prioridad = getFirst(row, ['prioridad', 'priority', 'Priority']) || '';
-
-                            // Azure DevOps exports often use "Start Dates" and "Due Date"
-                            const inicioRaw = getFirst(row, ['inicio', 'start', 'start date', 'start dates', 'Start Date', 'Start Dates']) || '';
-                            const finRaw = getFirst(row, ['fin', 'end', 'end date', 'due date', 'End Date', 'Due Date']) || '';
-
-                            const inicio = normalizeDate(inicioRaw);
-                            const fin = normalizeDate(finRaw);
-
-                            return {
-                                id: String(id).trim(),
-                                titulo: String(titulo).trim(),
-                                responsable: String(responsable).trim(),
-                                estado: String(estado).trim(),
-                                prioridad: String(prioridad).trim(),
-                                inicio,
-                                fin
-                            };
-                        }).filter(t => t.titulo && t.inicio && t.fin);
-
-                        if (formattedTasks.length === 0) {
-                            throw new Error('No valid rows found. Make sure your CSV has title/titulo, start/inicio, and end/fin (or Due Date).');
-                        }
-
-                        renderGantt(formattedTasks);
-                        console.log('✓ Gantt rendered with', formattedTasks.length, 'tasks');
-                    } catch (error) {
-                        console.error('❌ Error reading CSV:', error.message);
-                        alert('Error reading CSV: ' + error.message);
-                        renderGantt(backupTasks);
-                    }
-                };
-
-                reader.onerror = (error) => {
-                    console.error('❌ FileReader error:', error);
-                    renderGantt(backupTasks);
-                };
-
+                reader.onload = event => processCSV(event.target.result);
                 reader.readAsText(file);
             };
-
-            document.body.appendChild(input);
-            console.log('📂 Opening file picker to select a CSV file');
             input.click();
         }
 
-        /**
-         * CSV parser with:
-         * - delimiter auto-detection (comma or semicolon)
-         * - quoted values support
-         * - header normalization (trim, lowercase, remove BOM)
-         */
-        function parseCSV(text) {
-            const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            const lines = normalized.split('\n').filter(line => line.trim().length > 0);
-            if (lines.length < 2) return [];
+        function processCSV(text) {
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            if (lines.length < 2) return;
 
-            const delimiter = detectDelimiter(lines[0]);
-            const rawHeaders = splitCSVLine(lines[0], delimiter);
-            const headers = rawHeaders.map(h => normalizeHeader(h));
+            // Auto-detect delimiter
+            const firstLine = lines[0];
+            const delimiter = firstLine.includes(';') ? ';' : ',';
+            
+            // Normalize headers
+            const headers = splitCSVLine(firstLine, delimiter).map(h => 
+                h.trim().toLowerCase().replace(/^"|"$/g, '').replace(/^\uFEFF/, "")
+            );
 
-            const rows = [];
-            for (let i = 1; i < lines.length; i++) {
-                const values = splitCSVLine(lines[i], delimiter);
+            const tasks = lines.slice(1).map(line => {
+                const values = splitCSVLine(line, delimiter);
                 const row = {};
-                headers.forEach((h, idx) => {
-                    row[h] = (values[idx] ?? '').trim();
+                headers.forEach((h, i) => {
+                    row[h] = values[i] ? values[i].replace(/^"|"$/g, '').trim() : '';
                 });
-                rows.push(row);
-            }
-            return rows;
-        }
 
-        function detectDelimiter(headerLine) {
-            const commas = (headerLine.match(/,/g) || []).length;
-            const semis = (headerLine.match(/;/g) || []).length;
-            return semis > commas ? ';' : ',';
-        }
+                // Mapping based on your specific Azure CSV structure
+                const id = row['id'] || '0';
+                const title = row['title'] || 'Untitled';
+                const owner = row['assigned to'] || '';
+                
+                // Date column priority
+                const rawStart = row['start dates'] || row['start date'];
+                const rawEnd = row['due date'] || row['end date'];
 
-        function normalizeHeader(h) {
-            if (!h) return '';
-            // Remove BOM + trim, keep original too in row via normalized keys
-            const noBom = h.replace(/^\uFEFF/, '').trim();
-            return noBom.toLowerCase();
-        }
+                return {
+                    id: id,
+                    titulo: title,
+                    responsable: owner,
+                    inicio: parseAzureDate(rawStart),
+                    fin: parseAzureDate(rawEnd)
+                };
+            }).filter(t => t.inicio && t.fin);
 
-        function getFirst(row, keys) {
-            for (const k of keys) {
-                const nk = String(k).toLowerCase();
-                if (row[nk] !== undefined && row[nk] !== null && String(row[nk]).trim() !== '') {
-                    return row[nk];
-                }
-            }
-            return '';
-        }
-
-        function normalizeDate(value) {
-            const v = String(value || '').trim();
-            if (!v) return '';
-
-            // Already ISO
-            if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-
-            // Azure DevOps export example: "19/1/2026 12:00:00 a.m."
-            // Take the first token as date
-            const datePart = v.split(' ')[0];
-            const parts = datePart.split('/');
-            if (parts.length === 3) {
-                const d = parts[0].padStart(2, '0');
-                const m = parts[1].padStart(2, '0');
-                const y = parts[2].length === 2 ? ('20' + parts[2]) : parts[2];
-                if (/^\d{4}$/.test(y)) return `${y}-${m}-${d}`;
+            if (tasks.length === 0) {
+                alert("No valid tasks found with Start and Due dates. Please check your CSV columns.");
+                return;
             }
 
-            // Fallback: let Date try
-            const dt = new Date(v);
-            if (!isNaN(dt.getTime())) {
-                const y = dt.getFullYear();
-                const m = String(dt.getMonth() + 1).padStart(2, '0');
-                const d = String(dt.getDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            }
-
-            return '';
+            renderGantt(tasks);
         }
 
         function splitCSVLine(line, delimiter) {
             const result = [];
-            let current = '';
+            let cur = '';
             let inQuotes = false;
-
             for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                const next = line[i + 1];
-
-                if (char === '"' && inQuotes && next === '"') {
-                    current += '"';
-                    i++;
-                    continue;
+                let char = line[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === delimiter && !inQuotes) {
+                    result.push(cur);
+                    cur = '';
+                } else {
+                    cur += char;
                 }
-
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                    continue;
-                }
-
-                if (char === delimiter && !inQuotes) {
-                    result.push(current);
-                    current = '';
-                    continue;
-                }
-
-                current += char;
             }
-
-            result.push(current);
+            result.push(cur);
             return result;
+        }
+
+        function parseAzureDate(v) {
+            if (!v || v === "") return null;
+            // Azure often exports: "2/16/2026 12:00:00 AM" or "2/16/2026"
+            const clean = v.split(' ')[0];
+            const parts = clean.split(/[\/-]/);
+            
+            if (parts.length === 3) {
+                let m, d, y;
+                // M/D/YYYY format
+                m = parts[0].padStart(2, '0');
+                d = parts[1].padStart(2, '0');
+                y = parts[2];
+                if (y.length === 2) y = "20" + y;
+                return `${y}-${m}-${d}`;
+            }
+            return null;
         }
 
         function renderGantt(tasks) {
             const body = document.getElementById('gantt-body');
-            const header = document.getElementById('gantt-header');
-            const rangeLabel = document.getElementById('date-range-label');
-
+            const headerDays = document.getElementById('header-days-container');
+            const info = document.getElementById('date-range-info');
+            
             body.innerHTML = '';
-            header.innerHTML = '<div class="sticky-col w-64 p-4 text-xs font-black uppercase tracking-widest text-gray-400 bg-gray-50">Task Details</div>';
+            headerDays.innerHTML = '';
 
-            if (!tasks || tasks.length === 0) return;
+            // Calculate total range
+            const allDates = tasks.flatMap(t => [new Date(t.inicio), new Date(t.fin)]);
+            let minDate = new Date(Math.min(...allDates));
+            let maxDate = new Date(Math.max(...allDates));
 
-            const startDates = tasks.map(t => new Date(t.inicio));
-            const endDates = tasks.map(t => new Date(t.fin));
-
-            let minDate = new Date(Math.min(...startDates));
-            let maxDate = new Date(Math.max(...endDates));
-
-            // Date padding
+            // Viewport padding
             minDate.setDate(minDate.getDate() - 2);
             maxDate.setDate(maxDate.getDate() + 5);
 
-            const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
-            const dayWidth = 40;
+            const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+            info.innerText = `Showing from ${minDate.toLocaleDateString()} to ${maxDate.toLocaleDateString()} (${tasks.length} tasks)`;
 
-            rangeLabel.innerText = `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;
-
+            // Render Day Headers
             for (let i = 0; i < totalDays; i++) {
-                const current = new Date(minDate);
-                current.setDate(minDate.getDate() + i);
-
+                const cur = new Date(minDate);
+                cur.setDate(minDate.getDate() + i);
+                const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
+                
                 const dayEl = document.createElement('div');
-                dayEl.className = 'day-column';
-                dayEl.style.width = `${dayWidth}px`;
+                dayEl.className = `day-cell header-day ${isWeekend ? 'weekend' : ''}`;
                 dayEl.innerHTML = `
-                    <span class="block font-bold">${current.getDate()}</span>
-                    <span class="opacity-60">${current.toLocaleString('en-US', { weekday: 'short' }).charAt(0)}</span>
+                    <span class="text-[9px] font-black">${cur.getDate()}</span>
+                    <span class="text-[7px] opacity-40 uppercase">${cur.toLocaleDateString('en-US', {weekday: 'short'})}</span>
                 `;
-                header.appendChild(dayEl);
+                headerDays.appendChild(dayEl);
             }
 
-            tasks.forEach(task => {
+            // Render Rows
+            tasks.sort((a,b) => new Date(a.inicio) - new Date(b.inicio)).forEach(task => {
                 const row = document.createElement('div');
                 row.className = 'gantt-row';
-                row.style.gridTemplateColumns = `256px repeat(${totalDays}, ${dayWidth}px)`;
-
-                const titleCol = document.createElement('div');
-                titleCol.className = 'sticky-col px-4 h-full flex items-center overflow-hidden';
-                titleCol.innerHTML = `
-                    <div class="truncate">
-                        <span class="text-[10px] block text-gray-400 font-bold">#${task.id}</span>
-                        <span class="text-xs font-bold text-gray-700 truncate">${task.titulo}</span>
+                
+                // Sticky Label
+                const label = document.createElement('div');
+                label.className = 'sticky-col';
+                label.innerHTML = `
+                    <div class="truncate w-full">
+                        <div class="flex justify-between items-center mb-0.5">
+                            <span class="text-[9px] font-black text-slate-400">#${task.id}</span>
+                            <span class="text-[8px] font-medium text-slate-400 truncate max-w-[120px]">${task.responsable}</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-700 truncate" title="${task.titulo}">${task.titulo}</div>
                     </div>
                 `;
-                row.appendChild(titleCol);
+                row.appendChild(label);
 
-                const tStart = new Date(task.inicio);
-                const tEnd = new Date(task.fin);
+                // Grid Background
+                const grid = document.createElement('div');
+                grid.className = 'time-grid-container';
+                for(let i=0; i<totalDays; i++) {
+                    const cur = new Date(minDate);
+                    cur.setDate(minDate.getDate() + i);
+                    const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
+                    const cell = document.createElement('div');
+                    cell.className = `day-cell ${isWeekend ? 'weekend' : ''}`;
+                    grid.appendChild(cell);
+                }
 
-                const offset = Math.ceil((tStart - minDate) / (1000 * 60 * 60 * 24));
-                const duration = Math.ceil((tEnd - tStart) / (1000 * 60 * 60 * 24)) + 1;
+                // Bar
+                const dStart = new Date(task.inicio);
+                const dEnd = new Date(task.fin);
+                const offset = Math.floor((dStart - minDate) / (1000 * 60 * 60 * 24));
+                const duration = Math.floor((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1;
 
-                const barContainer = document.createElement('div');
-                barContainer.className = 'relative h-full flex items-center';
-                barContainer.style.gridColumn = `${offset + 2} / span ${duration}`;
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'gantt-bar-wrapper';
+                barWrapper.style.left = `${offset * dayWidth}px`;
+                barWrapper.style.width = `${duration * dayWidth}px`;
 
                 const bar = document.createElement('div');
-                bar.className = 'gantt-bar bg-kare-orange w-full shadow-lg shadow-orange-200 flex items-center px-2';
-                bar.innerHTML = `<span class="text-[9px] text-white font-black truncate">${duration}d</span>`;
-
-                barContainer.appendChild(bar);
-                row.appendChild(barContainer);
+                bar.className = 'gantt-bar';
+                bar.innerHTML = `<span class="truncate">${duration}d</span>`;
+                
+                barWrapper.appendChild(bar);
+                grid.appendChild(barWrapper);
+                row.appendChild(grid);
                 body.appendChild(row);
             });
 
+            // Today Line
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
+            today.setHours(0,0,0,0);
             if (today >= minDate && today <= maxDate) {
-                const todayOffset = (today - minDate) / (1000 * 60 * 60 * 24);
+                const offset = (today - minDate) / (1000 * 60 * 60 * 24);
                 const line = document.createElement('div');
                 line.className = 'today-line';
-                line.style.left = `${256 + (todayOffset * dayWidth)}px`;
+                line.style.left = `${stickyWidth + (offset * dayWidth)}px`;
+                line.innerHTML = `<div class="today-label">TODAY</div>`;
                 body.appendChild(line);
             }
         }
 
-        window.onload = function() {
-            renderGantt(backupTasks);
-        };
+        window.onload = () => renderGantt(backupTasks);
     </script>
 </body>
 </html>
